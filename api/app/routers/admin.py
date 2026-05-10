@@ -1,8 +1,7 @@
 """
 Admin API router — document management endpoints.
 
-Auth: X-Admin-Key header validated against ADMIN_API_KEY env var.
-TODO Phase 2: Replace X-Admin-Key with JWT-based admin role check.
+Auth: JWT Bearer token with admin role (Phase 2 replacement for X-Admin-Key).
 
 Endpoints:
   POST   /admin/documents/upload       — Upload PDF, trigger ingestion
@@ -13,33 +12,20 @@ Endpoints:
 import uuid
 from pathlib import Path
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Security, UploadFile
-from fastapi.security import APIKeyHeader
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
+from app.core.deps import require_admin
 from app.db.session import get_session
 from app.models.document import Document, DocumentStatus
+from app.models.user import User
 from app.services.ingestion import ingest_document
 
 settings = get_settings()
 router = APIRouter(tags=["admin"])
-
-_admin_key_header = APIKeyHeader(name="X-Admin-Key", auto_error=False)
-
-
-async def require_admin_key(api_key: str | None = Security(_admin_key_header)) -> None:
-    """
-    FastAPI dependency that validates the X-Admin-Key header.
-    TODO Phase 2: Replace with JWT role check (admin claim).
-    """
-    if api_key is None or api_key != settings.admin_api_key:
-        raise HTTPException(
-            status_code=403,
-            detail="Invalid or missing X-Admin-Key header.",
-        )
 
 
 class DocumentUploadResponse(BaseModel):
@@ -74,7 +60,7 @@ async def upload_document(
     file: UploadFile,
     background_tasks: BackgroundTasks,
     session: AsyncSession = Depends(get_session),
-    _: None = Depends(require_admin_key),
+    _: None = Depends(require_admin),
 ) -> DocumentUploadResponse:
     """Upload a PDF file. Returns 202 immediately; ingestion runs asynchronously."""
     filename = file.filename or ""
@@ -130,7 +116,7 @@ async def upload_document(
 )
 async def list_documents(
     session: AsyncSession = Depends(get_session),
-    _: None = Depends(require_admin_key),
+    _: None = Depends(require_admin),
 ) -> DocumentListResponse:
     """Return all documents in the knowledge base, ordered by creation date descending."""
     result = await session.execute(
@@ -162,7 +148,7 @@ async def list_documents(
 async def get_document(
     document_id: str,
     session: AsyncSession = Depends(get_session),
-    _: None = Depends(require_admin_key),
+    _: None = Depends(require_admin),
 ) -> DocumentListItem:
     """Return a single document's current status. Use to poll ingestion progress."""
     result = await session.execute(
@@ -190,7 +176,7 @@ async def get_document(
 async def delete_document(
     document_id: str,
     session: AsyncSession = Depends(get_session),
-    _: None = Depends(require_admin_key),
+    _: None = Depends(require_admin),
 ) -> None:
     """
     Delete a document from the knowledge base.

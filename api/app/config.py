@@ -38,6 +38,14 @@ class Settings(BaseSettings):
     # Storage
     pdf_storage_path: str = "/app/storage/pdfs"
 
+    # JWT Auth (Phase 2)
+    jwt_secret_key: str  # Required — generate with: openssl rand -hex 32
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 1440  # 24 hours
+
+    # LLM (Phase 2)
+    llm_model: str = "anthropic/claude-3-5-haiku"
+
 
 @lru_cache
 def get_settings() -> Settings:
