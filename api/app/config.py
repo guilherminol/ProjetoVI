@@ -46,6 +46,11 @@ class Settings(BaseSettings):
     # LLM (Phase 2)
     llm_model: str = "anthropic/claude-3-5-haiku"
 
+    @property
+    def langgraph_conn_string(self) -> str:
+        """psycopg3-style connection string for LangGraph AsyncPostgresSaver."""
+        return self.database_url.replace("postgresql+asyncpg://", "postgresql://")
+
 
 @lru_cache
 def get_settings() -> Settings:
