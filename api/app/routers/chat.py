@@ -13,12 +13,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.core.deps import get_current_user
 from app.db.session import AsyncSessionFactory, get_session
-from app.models.conversation_log import ConversationLog
+from app.models.conversation_log import ConversationLog, FeedbackRating
 from app.models.document import Document, DocumentStatus
 from app.models.user import User
 
 router = APIRouter(tags=["chat"])
 settings = get_settings()
+
+
+class FeedbackRequest(BaseModel):
+    rating: str  # "useful" | "not_useful"
+
 
 NOT_FOUND_MSG = (
     "Não encontrei informações nos manuais disponíveis para responder sua pergunta. "
@@ -83,9 +88,10 @@ async def _sse_stream(
         }
         for c in retrieved_chunks
     ]
-    yield f"data: {json.dumps({'type': 'done', 'not_found': not_found, 'sources': sources})}\n\n"
 
+    # Save log and get ID before emitting done so client can submit feedback
     src = retrieved_chunks[0] if retrieved_chunks else {}
+    log_id: int | None = None
     async with AsyncSessionFactory() as db:
         log = ConversationLog(
             session_id=session_id,
@@ -97,7 +103,11 @@ async def _sse_stream(
             not_found=not_found,
         )
         db.add(log)
+        await db.flush()
+        log_id = log.id
         await db.commit()
+
+    yield f"data: {json.dumps({'type': 'done', 'not_found': not_found, 'sources': sources, 'log_id': log_id})}\n\n"
 
 
 @router.post("", status_code=200)
@@ -144,3 +154,26 @@ async def download_document(
         filename=doc.filename,
         media_type="application/pdf",
     )
+
+
+@router.patch("/feedback/{log_id}", status_code=204)
+async def submit_feedback(
+    log_id: int,
+    body: FeedbackRequest,
+    session: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+) -> None:
+    if body.rating not in ("useful", "not_useful"):
+        raise HTTPException(status_code=422, detail="rating must be 'useful' or 'not_useful'")
+
+    result = await session.execute(
+        select(ConversationLog).where(
+            ConversationLog.id == log_id,
+            ConversationLog.user_id == current_user.id,
+        )
+    )
+    log = result.scalar_one_or_none()
+    if log is None:
+        raise HTTPException(status_code=404, detail="Conversation log not found.")
+
+    log.rating = FeedbackRating(body.rating)

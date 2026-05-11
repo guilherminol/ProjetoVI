@@ -14,12 +14,13 @@ from pathlib import Path
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile
 from pydantic import BaseModel
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.core.deps import require_admin
 from app.db.session import get_session
+from app.models.conversation_log import ConversationLog, FeedbackRating
 from app.models.document import Document, DocumentStatus
 from app.models.user import User
 from app.services.ingestion import ingest_document
@@ -197,3 +198,65 @@ async def delete_document(
         file_path.unlink()
 
     await session.delete(document)
+
+
+class FeedbackLogItem(BaseModel):
+    log_id: int
+    session_id: str
+    question: str
+    answer: str
+    rating: str | None
+    created_at: str
+
+
+class FeedbackStatsResponse(BaseModel):
+    total_rated: int
+    useful_count: int
+    not_useful_count: int
+    satisfaction_rate: float
+    worst_responses: list[FeedbackLogItem]
+
+
+@router.get("/feedback/stats", response_model=FeedbackStatsResponse, summary="Feedback dashboard stats")
+async def feedback_stats(
+    session: AsyncSession = Depends(get_session),
+    _: User = Depends(require_admin),
+) -> FeedbackStatsResponse:
+    useful_count_result = await session.execute(
+        select(func.count()).where(ConversationLog.rating == FeedbackRating.useful)
+    )
+    useful = useful_count_result.scalar_one()
+
+    not_useful_count_result = await session.execute(
+        select(func.count()).where(ConversationLog.rating == FeedbackRating.not_useful)
+    )
+    not_useful = not_useful_count_result.scalar_one()
+
+    total = useful + not_useful
+    rate = round(useful / total, 4) if total > 0 else 0.0
+
+    worst_result = await session.execute(
+        select(ConversationLog)
+        .where(ConversationLog.rating == FeedbackRating.not_useful)
+        .order_by(ConversationLog.created_at.desc())
+        .limit(20)
+    )
+    worst = worst_result.scalars().all()
+
+    return FeedbackStatsResponse(
+        total_rated=total,
+        useful_count=useful,
+        not_useful_count=not_useful,
+        satisfaction_rate=rate,
+        worst_responses=[
+            FeedbackLogItem(
+                log_id=log.id,
+                session_id=log.session_id,
+                question=log.question,
+                answer=log.answer,
+                rating=log.rating.value if log.rating else None,
+                created_at=log.created_at.isoformat(),
+            )
+            for log in worst
+        ],
+    )

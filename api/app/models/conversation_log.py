@@ -1,9 +1,15 @@
+import enum
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, func
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.session import Base
+
+
+class FeedbackRating(str, enum.Enum):
+    useful = "useful"
+    not_useful = "not_useful"
 
 
 class ConversationLog(Base):
@@ -19,6 +25,9 @@ class ConversationLog(Base):
     source_document_id: Mapped[str | None] = mapped_column(String(36), nullable=True)
     source_filename: Mapped[str | None] = mapped_column(String(512), nullable=True)
     not_found: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    rating: Mapped[FeedbackRating | None] = mapped_column(
+        Enum(FeedbackRating, name="feedback_rating"), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
