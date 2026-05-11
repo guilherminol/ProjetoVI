@@ -1,4 +1,6 @@
 import json
+import logging
+import time
 import uuid
 from collections.abc import AsyncGenerator
 from pathlib import Path
@@ -19,6 +21,7 @@ from app.models.user import User
 
 router = APIRouter(tags=["chat"])
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
 
 class FeedbackRequest(BaseModel):
@@ -46,6 +49,16 @@ async def _sse_stream(
     user_id: str,
     graph,
 ) -> AsyncGenerator[str, None]:
+    t_start = time.monotonic()
+    logger.info(
+        "Chat request started",
+        extra={
+            "event": "chat_start",
+            "session_id": session_id,
+            "user_id": user_id,
+            "question_len": len(question),
+        },
+    )
     config = {"configurable": {"thread_id": session_id}}
     initial_state: dict = {
         "question": question,
@@ -108,6 +121,18 @@ async def _sse_stream(
         await db.commit()
 
     yield f"data: {json.dumps({'type': 'done', 'not_found': not_found, 'sources': sources, 'log_id': log_id})}\n\n"
+
+    logger.info(
+        "Chat request completed",
+        extra={
+            "event": "chat_done",
+            "session_id": session_id,
+            "user_id": user_id,
+            "not_found": not_found,
+            "chunks_retrieved": len(retrieved_chunks),
+            "latency_s": round(time.monotonic() - t_start, 3),
+        },
+    )
 
 
 @router.post("", status_code=200)
