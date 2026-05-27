@@ -3,7 +3,6 @@ from typing import Annotated, TypedDict
 
 from langchain_core.messages import SystemMessage
 from langchain_openai import ChatOpenAI
-from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.graph import END, StateGraph
 from langgraph.graph.message import add_messages
 
@@ -37,10 +36,7 @@ def _build_context_prompt(chunks: list[dict]) -> str:
     )
 
 
-async def setup_rag_graph():
-    checkpointer = AsyncPostgresSaver.from_conn_string(settings.langgraph_conn_string)
-    await checkpointer.setup()
-
+async def build_rag_graph(checkpointer):
     llm = ChatOpenAI(
         model=settings.llm_model,
         api_key=settings.openrouter_api_key,

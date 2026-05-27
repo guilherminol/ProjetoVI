@@ -16,10 +16,13 @@ settings = get_settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    from app.services.rag import setup_rag_graph
-    app.state.rag_graph = await setup_rag_graph()
-    logger.info("RAG graph ready", extra={"event": "startup"})
-    yield
+    from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+    from app.services.rag import build_rag_graph
+    async with AsyncPostgresSaver.from_conn_string(settings.langgraph_conn_string) as checkpointer:
+        await checkpointer.setup()
+        app.state.rag_graph = await build_rag_graph(checkpointer)
+        logger.info("RAG graph ready", extra={"event": "startup"})
+        yield
 
 
 app = FastAPI(

@@ -1,0 +1,148 @@
+\documentclass[a4paper,12pt,Times]{article}
+\usepackage{abakos} 
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Definições de Comandos e Estilo
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newcommand{\keyword}[1]{\textsf{#1}}
+
+% Título do documento adicionado conforme sugestão
+\newcommand{\monog}{Desenvolvimento de Sistema RAG para Automação de Suporte Técnico Nível 1 na Cancella Informática LTDA}
+\newcommand{\monogES}{Enterprise RAG System for Level 1 Support}
+\newcommand{\tipo}{Relatório de Práticas Extensionistas - Sprints 2 e 3} 
+\newcommand{\origem}{Brasil}
+\newcommand{\editorial}{\textbf{Abakos}, Belo Horizonte, v. 1, n. 1, p. 00-00, 2026}
+
+%%%%%%%%%%%%%%%%% INFORMAÇÕES SOBRE OS AUTORES %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newcommand{\AutorA}{Guilhermino Lucas Chaves Araújo}
+\newcommand{\emailA}{guilherminolucasc@gmail.com}
+\newcommand{\cursA}{Graduando em Ciência de Dados e IA}
+
+\newcommand{\AutorB}{Luis Fernando da Rocha Cancella}
+\newcommand{\emailB}{luisfernando@cancella.com.br}
+\newcommand{\cursB}{Graduando em Ciência de Dados e IA}
+
+\newcommand{\AutorC}{André Luiz Santos Moreira da Silva}
+\newcommand{\emailC}{andremoreiradasilva95@gmail.com}
+\newcommand{\cursC}{Graduando em Ciência de Dados e IA}
+
+\begin{document}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Página de Título
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{flushleft}
+    \begin{minipage} [c][5cm][b]{16.5cm}
+        \includegraphics[scale=2.8]{figuras/pucmg.png} 
+    \end{minipage}
+    \vspace{0cm} {
+        \singlespacing \Large{\monog \symbolfootnote[1]{Trabalho apresentado à disciplina de Projeto em Ciência de Dados VI - Práticas Extensionistas.} \\ }
+        \normalsize{\monogES}
+    }
+\end{flushleft}
+
+\begin{flushright}
+    \singlespacing 
+    \normalsize{\AutorA \footnote{\cursA, PUC Minas -- \emailA }} \\
+    \normalsize{\AutorB \footnote{\cursB, PUC Minas -- \emailB }} \\
+    \normalsize{\AutorC \footnote{\cursC, PUC Minas -- \emailC }}
+\end{flushright}
+
+\thispagestyle{empty}
+
+\begin{abstract}
+\noindent
+Este relatório consolida o planejamento e o diagnóstico para o desenvolvimento de um sistema \textit{Retrieval-Augmented Generation} (RAG) voltado à Cancella Informática LTDA. A medida que os serviços migram para o ambiente digital, o volume de demandas de suporte técnico cresce proporcionalmente, exigindo soluções automatizadas para evitar a insatisfação do cliente. O projeto foca no atendimento B2B, utilizando uma base de conhecimento vetorial para reduzir o tempo de resposta e liberar a equipe técnica de tarefas repetitivas. Este documento detalha a motivação arquitetural, o escopo de execução e a análise situacional que sustenta a viabilidade da solução.
+\\\textbf{\keyword{Palavras-chave: }} RAG. Inteligência Artificial. Automação de Atendimento. Suporte Técnico B2B.
+\end{abstract}
+
+\newpage 
+\onehalfspace 
+\setlength{\parindent}{1.25cm}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% INÍCIO DO TEXTO
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{O Projeto}
+A transição em massa de serviços e operações para o ambiente digital expandiu drasticamente a abrangência de clientes, resultando em um aumento exponencial no volume de dúvidas e solicitações de suporte. Para empresas do setor de tecnologia, a incapacidade de responder a essas demandas em tempo hábil torna-se um gargalo crítico, gerando insatisfações que frequentemente transbordam para plataformas públicas de reclamação, como o "ReclameAqui", comprometendo a reputação da marca. Nesse cenário, o atendimento robotizado surge como uma estratégia vital para mitigar esses riscos, filtrando demandas repetitivas e garantindo respostas imediatas através de agentes de Inteligência Artificial.
+
+Este projeto visa otimizar o suporte de Nível 1 da Cancella Informática LTDA, empresa fundada em 1995 por Danton Cancella, especialista em infraestrutura de rede e servidores, o qual é nosso contato dentro da empresa. O foco da solução é o mercado \textbf{B2B (Business-to-Business)}, atendendo clientes corporativos que dependem da continuidade operacional de seus \textit{datacenters}. A implementação de um assistente inteligente não apenas resolve o problema da latência no suporte, mas também possui forte pertinência acadêmica ao aplicar orquestração de estados e busca semântica para resolver problemas reais de engenharia de dados. Socialmente, o projeto democratiza o acesso a suporte técnico especializado para pequenas e médias empresas parceiras, promovendo maior produtividade no ecossistema local.
+
+\section{Arquitetura RAG: Motivação e Conceito}
+Diferente de modelos tradicionais de busca baseados apenas em palavras-chave ou árvores de decisão rígidas, a arquitetura \textit{Retrieval-Augmented Generation} (RAG) permite que a IA compreenda o contexto semântico da dúvida do usuário. Enquanto sistemas comuns de FAQ muitas vezes falham em encontrar respostas se os termos exatos não forem utilizados, o RAG transforma a documentação técnica em representações vetoriais (\textit{embeddings}), permitindo que o sistema localize a informação correta por similaridade de significado.
+
+A motivação para utilizar RAG em vez de um modelo generativo puro (como um GPT sem base de dados externa) reside na eliminação de alucinações técnicas. No suporte de infraestrutura, uma instrução incorreta pode causar prejuízos financeiros severos. O RAG garante que a IA utilize exclusivamente manuais e especificações técnicas da Cancella Informática para formular respostas. Embora a implementação de bancos vetoriais e orquestradores de fluxo como o LangGraph apresente uma complexidade técnica superior, o ganho em acurácia e a facilidade de atualização da base de conhecimento sem a necessidade de retreinamento do modelo tornam esse investimento indispensável para a confiabilidade do suporte técnico.
+
+\section{Escopo do Projeto}
+O projeto possui uma duração total prevista de aproximadamente 141 dias, iniciando em fevereiro e estendendo-se até julho de 2026. Este cronograma é dividido em etapas fundamentais que compreendem o diagnóstico situacional, o levantamento de tecnologias, o desenvolvimento de um referencial teórico robusto e a implementação técnica da solução. Atualmente, o trabalho encontra-se na fase de especificação e definição de arquitetura, preparando o terreno para o desenvolvimento do backend e integração do widget de chat.
+
+\subsection{Lista de Tarefas e Metodologia}
+As atividades previstas para a execução do sistema incluem a estruturação da base de conhecimento a partir de PDFs legados e a configuração do banco PostgreSQL com \textit{pgvector}. O desenvolvimento seguirá a lógica de orquestração via LangGraph para gerenciar os nós de decisão do assistente. Adicionalmente, serão realizados testes de integração para garantir que o widget em React funcione de forma responsiva no site oficial da empresa.
+
+\subsection{Riscos, Restrições e Métricas}
+O sucesso da implementação depende da superação de desafios como a baixa qualidade de alguns documentos legados e a necessidade de integração com sistemas web pré-existentes. O desempenho será monitorado através da \textit{Deflection Rate} (taxa de resolução exclusivamente pela IA) e da redução do tempo médio de resposta. Espera-se que a automação reduza significativamente a carga sobre o único técnico responsável pelo Nível 1, transformando a eficiência do atendimento B2B da empresa.
+
+\section{Diagnóstico da Situação-Problema}
+O diagnóstico realizado junto à Cancella Informática revela que aproximadamente 60\% do tempo de trabalho do responsável técnico é consumido por dúvidas repetitivas cujas respostas já estão documentadas, porém de difícil acesso manual para o cliente. A empresa recebe entre 4 a 5 chamados diários de Nível 1, o que gera uma sobrecarga qualitativa e impede que o profissional se dedique a tarefas de alta complexidade em infraestrutura e redes.
+
+A situação-problema central é a alta latência no suporte causada pela "fricção informacional": o cliente B2B prefere o contato humano imediato à busca em manuais estáticos. Essa barreira de acesso à informação gera demora nas respostas e subutilização da mão de obra qualificada. A transição para um modelo de atendimento robotizado com RAG resolve essa fricção ao oferecer a informação técnica de forma instantânea e conversacional, transformando o suporte de um custo operacional em um diferencial competitivo para a organização.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% SEÇÃO DE ESPECIFICAÇÃO - SPRINT 4
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Especificação do Projeto}
+As especificações do projeto constituem o conjunto de documentos e definições que estabelecem os requisitos, padrões e expectativas técnicas para a entrega da solução. Esta etapa é fundamental para traduzir os objetivos de alto nível em resultados claros e verificáveis, servindo como uma ponte entre o escopo definido anteriormente e o processo final de avaliação de sucesso.
+
+\subsection{Requisitos de Negócio e Funcionais}
+Os requisitos de negócio focam na criação de valor operacional para a Cancella Informática LTDA. A meta central não é apenas a automação, mas a otimização do capital humano: busca-se liberar o tempo da equipe técnica sênior para operações de alta complexidade em infraestrutura e redes, visando uma redução mínima de 20\% no volume de tickets abertos de Nível 1.
+
+Para atender a essas metas, o sistema deverá apresentar as seguintes funcionalidades:
+\begin{itemize}
+    \item \textbf{Interação Conversacional:} Chatbot capaz de interpretar dúvidas técnicas e fornecer respostas contextualizadas baseadas na base de conhecimento.
+    \item \textbf{Gerenciamento de Contexto:} O sistema deve manter o histórico de perguntas dentro de uma mesma sessão, permitindo diálogos contínuos e refinamento de dúvidas.
+    \item \textbf{Acesso Direto à Documentação:} Além da resposta textual, a interface deve permitir que o usuário realize o download direto do manual técnico citado pela IA.
+    \item \textbf{Mecanismo de Feedback:} Implementação de um sistema de avaliação binária (curtir/descurtir), permitindo que o cliente valide a precisão da resposta em tempo real.
+\end{itemize}
+
+\subsection{Requisitos Técnicos e Não Funcionais}
+A infraestrutura técnica será composta por tecnologias que garantam a confiabilidade exigida pelo mercado B2B. O sistema será hospedado em **servidores próprios** da Cancella Informática, garantindo total controle sobre a soberania dos dados e integração com o ambiente de rede atual.
+
+Em termos de desempenho e qualidade, os parâmetros estabelecidos são:
+\begin{itemize}
+    \item \textbf{Tempo de Resposta:} A latência para a geração de respostas pela IA não deve ultrapassar 5 segundos, garantindo uma experiência de usuário fluida e eficiente.
+    \item \textbf{Disponibilidade e Escalabilidade:} O serviço operará em regime 24/7, com capacidade para suportar o acesso simultâneo de 3 a 4 usuários no cenário atual de atendimento da empresa.
+    \item \textbf{Auditoria e Segurança:} Diferente de sistemas anônimos, os logs de conversa serão registrados de forma identificada. Esta restrição visa permitir auditorias futuras e monitoramento de segurança contra usos indevidos do sistema.
+\end{itemize}
+
+\subsection{Critérios de Sucesso e Avaliação}
+Os critérios de sucesso estabelecem os parâmetros mensuráveis para determinar se o projeto atingiu seus objetivos estratégicos. Para a validação final da solução junto ao stakeholder Danton Cancella, serão considerados os seguintes indicadores:
+\begin{itemize}
+    \item \textbf{Eficiência Operacional:} Redução real de, no mínimo, 20\% na abertura de novos tickets de suporte básico.
+    \item \textbf{Nível de Satisfação:} Alcançar uma nota média de satisfação superior a 80\% nas avaliações coletadas via widget de chat.
+    \item \textbf{Acurácia Técnica:} Validação de que 100\% das respostas geradas estão fundamentadas exclusivamente nos manuais técnicos fornecidos, eliminando o risco de alucinações do modelo.
+\end{itemize}
+
+\section{Arquitetura do Projeto}
+A arquitetura do sistema foi projetada para formalizar a organização dos componentes e seus fluxos de comunicação, assegurando que a solução técnica atenda rigorosamente aos requisitos de desempenho e segurança estabelecidos. 
+
+\subsection{Padrão Arquitetural e Componentes}
+O desenvolvimento adotará o padrão MVC (Model-View-Controller) tradicional, operando em uma estrutura de backend monolítica. Esta escolha visa simplificar a manutenção e garantir a integridade da lógica de negócios em uma única instância de serviço. Os componentes fundamentais do sistema são:
+\begin{itemize}
+    \item \textbf{Camada de Apresentação (Frontend):} Composta pelo widget de chat e interface administrativa desenvolvidos em React, responsáveis pela interação direta com o usuário.
+    \item \textbf{Camada de Controle e Processamento (Backend):} Implementada em FastAPI, que atua como o núcleo orquestrador das requisições e execução do fluxo RAG.
+    \item \textbf{Camada de Dados:} Baseada no PostgreSQL com a extensão \textit{pgvector}, centralizando o armazenamento de metadados, logs e representações vetoriais da base de conhecimento.
+\end{itemize}
+
+\subsection{Fluxo de Comunicação e Ingestão}
+A comunicação entre o frontend e o backend será realizada através do protocolo REST (HTTP), garantindo uma arquitetura cliente-servidor padronizada e eficiente. O processo de alimentação do sistema ocorrerá via \textit{upload} direto de arquivos através de rotas dedicadas na API, permitindo que a gestão da base de conhecimento seja feita de forma contínua e controlada. Para assegurar a rastreabilidade exigida, a arquitetura prevê a vinculação de cada interação a identificadores de usuários específicos, integrando os requisitos de auditoria diretamente ao fluxo de dados.
+
+
+
+\subsection{Ambiente de Execução e Implantação}
+Visando garantir a compatibilidade de bibliotecas e a consistência entre ambientes, o projeto utilizará Docker para a conteinerização de todos os serviços. Toda a solução será executada em uma instância única nos servidores locais da Cancella Informática, unificando o processamento da API, do banco de dados e do widget em um ambiente controlado. Esta estratégia de \textit{deploy} local assegura a soberania dos dados técnicos da empresa e atende às restrições de infraestrutura identificadas.
+
+\end{document}

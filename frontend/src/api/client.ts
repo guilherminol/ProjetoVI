@@ -89,6 +89,21 @@ export async function uploadDocument(file: File): Promise<{ document_id: string;
   return res.json()
 }
 
+export async function downloadDocumentBlob(downloadUrl: string, filename: string): Promise<void> {
+  const token = getToken()
+  const res = await fetch(`${API}${downloadUrl}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+  if (!res.ok) throw new Error('Download failed')
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export async function deleteDocument(docId: string): Promise<void> {
   await fetch(`${API}/admin/documents/${docId}`, {
     method: 'DELETE',

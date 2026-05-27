@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { type Source, streamChat, submitFeedback } from '../api/client'
+import { type Source, streamChat, submitFeedback, downloadDocumentBlob } from '../api/client'
 import { useAuth } from '../contexts/AuthContext'
 
 interface Message {
@@ -128,15 +128,13 @@ export default function ChatPage() {
                     <p className="text-xs font-medium text-gray-500 mb-1">Fonte:</p>
                     <div className="flex flex-wrap gap-2">
                       {msg.sources.map((s) => (
-                        <a
+                        <button
                           key={s.document_id}
-                          href={`/api${s.download_url}`}
-                          target="_blank"
-                          rel="noreferrer"
+                          onClick={() => downloadDocumentBlob(s.download_url, s.filename)}
                           className="text-xs text-blue-600 underline hover:text-blue-800"
                         >
                           {s.filename}
-                        </a>
+                        </button>
                       ))}
                     </div>
                   </div>
