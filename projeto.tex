@@ -1,5 +1,7 @@
 \documentclass[a4paper,12pt,Times]{article}
-\usepackage{abakos} 
+\usepackage{abakos}
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, shapes.symbols}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Definições de Comandos e Estilo
@@ -7,10 +9,9 @@
 
 \newcommand{\keyword}[1]{\textsf{#1}}
 
-% Título do documento adicionado conforme sugestão
 \newcommand{\monog}{Desenvolvimento de Sistema RAG para Automação de Suporte Técnico Nível 1 na Cancella Informática LTDA}
 \newcommand{\monogES}{Enterprise RAG System for Level 1 Support}
-\newcommand{\tipo}{Relatório de Práticas Extensionistas - Sprints 2 e 3} 
+\newcommand{\tipo}{Relatório de Práticas Extensionistas - Sprints 2 e 3}
 \newcommand{\origem}{Brasil}
 \newcommand{\editorial}{\textbf{Abakos}, Belo Horizonte, v. 1, n. 1, p. 00-00, 2026}
 
@@ -35,7 +36,7 @@
 
 \begin{flushleft}
     \begin{minipage} [c][5cm][b]{16.5cm}
-        \includegraphics[scale=2.8]{figuras/pucmg.png} 
+        \includegraphics[scale=2.8]{figuras/pucmg.png}
     \end{minipage}
     \vspace{0cm} {
         \singlespacing \Large{\monog \symbolfootnote[1]{Trabalho apresentado à disciplina de Projeto em Ciência de Dados VI - Práticas Extensionistas.} \\ }
@@ -44,7 +45,7 @@
 \end{flushleft}
 
 \begin{flushright}
-    \singlespacing 
+    \singlespacing
     \normalsize{\AutorA \footnote{\cursA, PUC Minas -- \emailA }} \\
     \normalsize{\AutorB \footnote{\cursB, PUC Minas -- \emailB }} \\
     \normalsize{\AutorC \footnote{\cursC, PUC Minas -- \emailC }}
@@ -54,12 +55,22 @@
 
 \begin{abstract}
 \noindent
-Este relatório consolida o planejamento e o diagnóstico para o desenvolvimento de um sistema \textit{Retrieval-Augmented Generation} (RAG) voltado à Cancella Informática LTDA. A medida que os serviços migram para o ambiente digital, o volume de demandas de suporte técnico cresce proporcionalmente, exigindo soluções automatizadas para evitar a insatisfação do cliente. O projeto foca no atendimento B2B, utilizando uma base de conhecimento vetorial para reduzir o tempo de resposta e liberar a equipe técnica de tarefas repetitivas. Este documento detalha a motivação arquitetural, o escopo de execução e a análise situacional que sustenta a viabilidade da solução.
-\\\textbf{\keyword{Palavras-chave: }} RAG. Inteligência Artificial. Automação de Atendimento. Suporte Técnico B2B.
+Este relatório consolida o planejamento e o diagnóstico para o desenvolvimento de um
+sistema \textit{Retrieval-Augmented Generation} (RAG) voltado à Cancella Informática LTDA.
+À medida que os serviços migram para o ambiente digital, o volume de demandas de suporte
+técnico cresce proporcionalmente, exigindo soluções automatizadas para evitar a insatisfação
+do cliente. O projeto foca no atendimento B2B, utilizando o modelo Claude Haiku da Anthropic
+como motor de geração e vetores \textit{voyage-3} da Voyage AI indexados em PostgreSQL com
+\textit{pgvector} para recuperação semântica de documentos técnicos. O objetivo é reduzir
+em pelo menos 20\% o volume de \textit{tickets} de Nível~1, liberando a equipe técnica para
+demandas de maior complexidade. Este documento detalha a motivação arquitetural, o escopo
+de execução, a análise situacional, os critérios de validade do modelo e as extensões futuras
+previstas para a solução.
+\\\textbf{\keyword{Palavras-chave: }} RAG. Inteligência Artificial. Automação de Atendimento. Suporte Técnico B2B. Claude Haiku.
 \end{abstract}
 
-\newpage 
-\onehalfspace 
+\newpage
+\onehalfspace
 \setlength{\parindent}{1.25cm}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -67,82 +78,572 @@ Este relatório consolida o planejamento e o diagnóstico para o desenvolvimento
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{O Projeto}
-A transição em massa de serviços e operações para o ambiente digital expandiu drasticamente a abrangência de clientes, resultando em um aumento exponencial no volume de dúvidas e solicitações de suporte. Para empresas do setor de tecnologia, a incapacidade de responder a essas demandas em tempo hábil torna-se um gargalo crítico, gerando insatisfações que frequentemente transbordam para plataformas públicas de reclamação, como o "ReclameAqui", comprometendo a reputação da marca. Nesse cenário, o atendimento robotizado surge como uma estratégia vital para mitigar esses riscos, filtrando demandas repetitivas e garantindo respostas imediatas através de agentes de Inteligência Artificial.
 
-Este projeto visa otimizar o suporte de Nível 1 da Cancella Informática LTDA, empresa fundada em 1995 por Danton Cancella, especialista em infraestrutura de rede e servidores, o qual é nosso contato dentro da empresa. O foco da solução é o mercado \textbf{B2B (Business-to-Business)}, atendendo clientes corporativos que dependem da continuidade operacional de seus \textit{datacenters}. A implementação de um assistente inteligente não apenas resolve o problema da latência no suporte, mas também possui forte pertinência acadêmica ao aplicar orquestração de estados e busca semântica para resolver problemas reais de engenharia de dados. Socialmente, o projeto democratiza o acesso a suporte técnico especializado para pequenas e médias empresas parceiras, promovendo maior produtividade no ecossistema local.
+A transição em massa de serviços e operações para o ambiente digital expandiu drasticamente
+a abrangência de clientes, resultando em um aumento exponencial no volume de dúvidas e
+solicitações de suporte. Para empresas do setor de tecnologia, a incapacidade de responder
+a essas demandas em tempo hábil torna-se um gargalo crítico, gerando insatisfações que
+frequentemente transbordam para plataformas públicas de reclamação, como o
+\textit{``ReclameAqui''}, comprometendo a reputação da marca. Nesse cenário, o atendimento
+robotizado surge como uma estratégia vital para mitigar esses riscos, filtrando demandas
+repetitivas e garantindo respostas imediatas através de agentes de Inteligência Artificial.
+
+Este projeto visa otimizar o suporte de Nível~1 da Cancella Informática LTDA, empresa
+fundada em 1995 por Danton Cancella, especialista em infraestrutura de rede e servidores,
+o qual é nosso contato dentro da empresa. O foco da solução é o mercado \textbf{B2B
+(\textit{Business-to-Business})}, atendendo clientes corporativos que dependem da
+continuidade operacional de seus \textit{datacenters}. A implementação de um assistente
+inteligente não apenas resolve o problema da latência no suporte, mas também possui forte
+pertinência acadêmica ao aplicar orquestração de estados e busca semântica para resolver
+problemas reais de engenharia de dados. Socialmente, o projeto democratiza o acesso a
+suporte técnico especializado para pequenas e médias empresas parceiras, promovendo maior
+produtividade no ecossistema local.
+
 
 \section{Arquitetura RAG: Motivação e Conceito}
-Diferente de modelos tradicionais de busca baseados apenas em palavras-chave ou árvores de decisão rígidas, a arquitetura \textit{Retrieval-Augmented Generation} (RAG) permite que a IA compreenda o contexto semântico da dúvida do usuário. Enquanto sistemas comuns de FAQ muitas vezes falham em encontrar respostas se os termos exatos não forem utilizados, o RAG transforma a documentação técnica em representações vetoriais (\textit{embeddings}), permitindo que o sistema localize a informação correta por similaridade de significado.
 
-A motivação para utilizar RAG em vez de um modelo generativo puro (como um GPT sem base de dados externa) reside na eliminação de alucinações técnicas. No suporte de infraestrutura, uma instrução incorreta pode causar prejuízos financeiros severos. O RAG garante que a IA utilize exclusivamente manuais e especificações técnicas da Cancella Informática para formular respostas. Embora a implementação de bancos vetoriais e orquestradores de fluxo como o LangGraph apresente uma complexidade técnica superior, o ganho em acurácia e a facilidade de atualização da base de conhecimento sem a necessidade de retreinamento do modelo tornam esse investimento indispensável para a confiabilidade do suporte técnico.
+Diferente de modelos tradicionais de busca baseados apenas em palavras-chave ou árvores
+de decisão rígidas, a arquitetura \textit{Retrieval-Augmented Generation} (RAG) permite
+que a IA compreenda o contexto semântico da dúvida do usuário. Enquanto sistemas comuns
+de FAQ muitas vezes falham em encontrar respostas se os termos exatos não forem utilizados,
+o RAG transforma a documentação técnica em representações vetoriais (\textit{embeddings}),
+permitindo que o sistema localize a informação correta por similaridade de significado.
+
+A motivação para utilizar RAG em vez de um modelo generativo puro reside na eliminação
+de alucinações técnicas. No suporte de infraestrutura, uma instrução incorreta pode causar
+prejuízos financeiros severos — por exemplo, um comando equivocado de reinicialização de
+servidor pode derrubar serviços críticos de um cliente corporativo por horas. O RAG garante
+que o modelo Claude Haiku, utilizado como motor de geração de linguagem natural neste
+projeto, opere estritamente ancorado nos manuais e especificações técnicas da Cancella
+Informática, sem recorrer ao conhecimento parametrizado do modelo para formular respostas.
+A recuperação dos trechos relevantes é realizada via busca por similaridade de cosseno sobre
+vetores gerados pelo modelo \textit{voyage-3} da Voyage AI, armazenados no PostgreSQL com
+a extensão \textit{pgvector}.
+
+Embora a implementação de bancos vetoriais e orquestradores de fluxo como o LangGraph
+apresente uma complexidade técnica superior à de sistemas baseados em palavras-chave, o
+ganho em acurácia e a facilidade de atualização da base de conhecimento — sem necessidade
+de retreinamento do modelo — tornam esse investimento indispensável para a confiabilidade
+do suporte técnico.
+
+A Figura~\ref{fig:pipeline} ilustra o fluxo completo do pipeline RAG implementado,
+desde a ingestão dos documentos até a geração da resposta fundamentada na base de
+conhecimento.
+
+% ── Figura 1: Diagrama do pipeline RAG ───────────────────────────────────────
+\begin{figure}[ht]
+  \centering
+  \caption[\hspace{0.1cm}Pipeline RAG do sistema de suporte.]{Pipeline RAG: fluxo de ingestão de documentos e de consulta em tempo real}
+  \vspace{0.4cm}
+  \begin{tikzpicture}[
+      node distance = 0.55cm and 0.9cm,
+      box/.style   = {rectangle, rounded corners=3pt, draw=black, fill=gray!10,
+                      minimum width=2.5cm, minimum height=0.8cm,
+                      text width=2.4cm, align=center, font=\small},
+      store/.style = {cylinder, shape border rotate=90, draw=black, fill=gray!22,
+                      minimum width=2.3cm, minimum height=0.8cm,
+                      align=center, font=\small},
+      arrow/.style = {-{Stealth[length=5pt]}, thick},
+      lbl/.style   = {font=\scriptsize\itshape, text=gray!65!black}
+    ]
+    %% Linha superior — ingestão
+    \node[box]  (pdf)   {PDFs e\\Manuais};
+    \node[box,  right=of pdf]   (chunk) {Chunking\\(500 tokens)};
+    \node[box,  right=of chunk] (emb)   {Embedding\\(voyage-3)};
+    \node[store,right=of emb]   (vec)   {pgvector\\PostgreSQL};
+
+    \draw[arrow] (pdf)   -- (chunk);
+    \draw[arrow] (chunk) -- (emb);
+    \draw[arrow] (emb)   -- (vec);
+
+    \node[lbl, above=0.12cm of pdf]   {Ingestão};
+    \node[lbl, above=0.12cm of chunk] {Pré-processamento};
+    \node[lbl, above=0.12cm of emb]   {Vetorização};
+    \node[lbl, above=0.12cm of vec]   {Armazenamento};
+
+    %% Linha inferior — consulta
+    \node[box, below=1.3cm of pdf]    (usr)    {Consulta\\do Usuário};
+    \node[box, right=of usr]          (qemb)   {Embedding\\da Query};
+    \node[box, right=of qemb]         (search) {Busca por\\Similaridade};
+    \node[box, right=of search]       (haiku)  {Claude Haiku\\(Geração)};
+    \node[box, right=of haiku]        (resp)   {Resposta\\ao Usuário};
+
+    \draw[arrow] (usr)    -- (qemb);
+    \draw[arrow] (qemb)   -- (search);
+    \draw[arrow] (search) -- (haiku);
+    \draw[arrow] (haiku)  -- (resp);
+
+    \node[lbl, below=0.12cm of usr]    {Entrada};
+    \node[lbl, below=0.12cm of qemb]   {Vetorização};
+    \node[lbl, below=0.12cm of search] {Recuperação};
+    \node[lbl, below=0.12cm of haiku]  {Geração};
+    \node[lbl, below=0.12cm of resp]   {Saída};
+
+    %% Ligação armazenamento → busca
+    \draw[arrow, dashed] (vec.south) -- ++(0,-0.4) -| (search.north)
+          node[midway, above, font=\scriptsize\itshape, text=gray!65!black]
+          {top-$k$ chunks};
+  \end{tikzpicture}
+  \vspace{0.2cm}
+  \\\textbf{\footnotesize Fonte: Elaborado pelos autores}
+  \label{fig:pipeline}
+\end{figure}
+
 
 \section{Escopo do Projeto}
-O projeto possui uma duração total prevista de aproximadamente 141 dias, iniciando em fevereiro e estendendo-se até julho de 2026. Este cronograma é dividido em etapas fundamentais que compreendem o diagnóstico situacional, o levantamento de tecnologias, o desenvolvimento de um referencial teórico robusto e a implementação técnica da solução. Atualmente, o trabalho encontra-se na fase de especificação e definição de arquitetura, preparando o terreno para o desenvolvimento do backend e integração do widget de chat.
+
+O projeto possui uma duração total prevista de aproximadamente 141 dias, iniciando em
+fevereiro e estendendo-se até julho de 2026. Este cronograma é dividido em etapas
+fundamentais que compreendem o diagnóstico situacional, o levantamento de tecnologias,
+o desenvolvimento de um referencial teórico robusto e a implementação técnica da solução.
+Atualmente, o trabalho encontra-se na fase de especificação e definição de arquitetura,
+preparando o terreno para o desenvolvimento do \textit{backend} e integração do
+\textit{widget} de \textit{chat}.
 
 \subsection{Lista de Tarefas e Metodologia}
-As atividades previstas para a execução do sistema incluem a estruturação da base de conhecimento a partir de PDFs legados e a configuração do banco PostgreSQL com \textit{pgvector}. O desenvolvimento seguirá a lógica de orquestração via LangGraph para gerenciar os nós de decisão do assistente. Adicionalmente, serão realizados testes de integração para garantir que o widget em React funcione de forma responsiva no site oficial da empresa.
+
+As atividades previstas para a execução do sistema incluem a estruturação da base de
+conhecimento a partir de PDFs legados, com segmentação (\textit{chunking}) de documentos
+em blocos de aproximadamente 500 \textit{tokens} com sobreposição de 50 \textit{tokens}
+para preservar a coerência entre trechos adjacentes. Em seguida, cada bloco é vetorizado
+pelo modelo \textit{voyage-3} da Voyage AI e indexado no PostgreSQL com \textit{pgvector}.
+O desenvolvimento seguirá a lógica de orquestração via LangGraph para gerenciar os nós de
+decisão do assistente — incluindo os estados de recuperação, validação de relevância e
+geração de resposta. Adicionalmente, serão realizados testes de integração para garantir
+que o \textit{widget} em React funcione de forma responsiva no site oficial da empresa.
+
+A Figura~\ref{fig:io} apresenta um exemplo concreto de interação com o sistema, ilustrando
+o formato de entrada do usuário e a resposta estruturada gerada pelo modelo.
+
+% ── Figura 2: Exemplo de Input/Output ────────────────────────────────────────
+\begin{figure}[ht]
+  \centering
+  \caption[\hspace{0.1cm}Exemplo de input/output do assistente RAG.]{Exemplo de interação: consulta do usuário e resposta gerada pelo sistema}
+  \vspace{0.4cm}
+  \begin{tikzpicture}
+    \node[
+      rectangle, draw=black, rounded corners=3pt,
+      fill=blue!6, text width=12.5cm,
+      inner sep=10pt, font=\small
+    ] (input) {
+      \textbf{Usuário:} \textit{``O servidor Dell PowerEdge R740 não está reconhecendo o
+      disco adicionado no slot~3. O que devo verificar?''}
+    };
+    \node[
+      rectangle, draw=black, rounded corners=3pt,
+      fill=green!6, text width=12.5cm,
+      inner sep=10pt, font=\small,
+      below=0.5cm of input
+    ] (output) {
+      \textbf{Assistente (Claude Haiku):} \textit{De acordo com o Manual de Hardware do
+      Dell PowerEdge R740 (seção~4.2), verifique: (1)~se o cabo SAS/SATA está corretamente
+      conectado ao backplane; (2)~acesse o iDRAC e verifique o status do controlador
+      PERC~H730P em ``Storage~$\to$~Physical Disks''; (3)~caso o disco apareça como
+      ``Foreign'', execute ``Import Foreign Configuration''. Caso o problema persista,
+      o manual completo está disponível para download abaixo.}\\[4pt]
+      \textbf{\footnotesize Fonte citada:} \texttt{manual\_poweredge\_r740\_hw.pdf},
+      p.~47
+    };
+    \draw[-{Stealth[length=5pt]}, thick] (input.south) -- (output.north);
+  \end{tikzpicture}
+  \vspace{0.2cm}
+  \\\textbf{\footnotesize Fonte: Elaborado pelos autores}
+  \label{fig:io}
+\end{figure}
 
 \subsection{Riscos, Restrições e Métricas}
-O sucesso da implementação depende da superação de desafios como a baixa qualidade de alguns documentos legados e a necessidade de integração com sistemas web pré-existentes. O desempenho será monitorado através da \textit{Deflection Rate} (taxa de resolução exclusivamente pela IA) e da redução do tempo médio de resposta. Espera-se que a automação reduza significativamente a carga sobre o único técnico responsável pelo Nível 1, transformando a eficiência do atendimento B2B da empresa.
+
+O sucesso da implementação depende da superação de desafios como a baixa qualidade de
+alguns documentos legados — PDFs escaneados sem camada de texto pesquisável exigirão
+pré-processamento com OCR antes da ingestão — e a necessidade de integração com sistemas
+\textit{web} pré-existentes. O desempenho será monitorado através de dois indicadores
+principais: a \textit{Deflection Rate}, definida como a proporção de chamados resolvidos
+exclusivamente pelo assistente sem escalada para o técnico humano, e o Tempo Médio de
+Primeira Resposta (TMPR), medido em segundos a partir do envio da consulta. Espera-se
+que a automação reduza significativamente a carga sobre o único técnico responsável pelo
+Nível~1, transformando a eficiência do atendimento B2B da empresa.
+
 
 \section{Diagnóstico da Situação-Problema}
-O diagnóstico realizado junto à Cancella Informática revela que aproximadamente 60\% do tempo de trabalho do responsável técnico é consumido por dúvidas repetitivas cujas respostas já estão documentadas, porém de difícil acesso manual para o cliente. A empresa recebe entre 4 a 5 chamados diários de Nível 1, o que gera uma sobrecarga qualitativa e impede que o profissional se dedique a tarefas de alta complexidade em infraestrutura e redes.
 
-A situação-problema central é a alta latência no suporte causada pela "fricção informacional": o cliente B2B prefere o contato humano imediato à busca em manuais estáticos. Essa barreira de acesso à informação gera demora nas respostas e subutilização da mão de obra qualificada. A transição para um modelo de atendimento robotizado com RAG resolve essa fricção ao oferecer a informação técnica de forma instantânea e conversacional, transformando o suporte de um custo operacional em um diferencial competitivo para a organização.
+O diagnóstico realizado junto à Cancella Informática revela que aproximadamente 60\% do
+tempo de trabalho do responsável técnico é consumido por dúvidas repetitivas cujas respostas
+já estão documentadas, porém de difícil acesso manual para o cliente — como procedimentos
+de reinicialização de serviços, configuração de \textit{firewall} e verificação de logs de
+erro em servidores. A empresa recebe entre 4 a 5 chamados diários de Nível~1, o que gera
+uma sobrecarga qualitativa e impede que o profissional se dedique a tarefas de alta
+complexidade em infraestrutura e redes.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% SEÇÃO DE ESPECIFICAÇÃO - SPRINT 4
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+A situação-problema central é a alta latência no suporte causada pela
+\textit{``fricção informacional''}: o cliente B2B prefere o contato humano imediato à busca
+em manuais estáticos de centenas de páginas. Essa barreira de acesso à informação gera
+demora nas respostas e subutilização da mão de obra qualificada. A transição para um modelo
+de atendimento robotizado com RAG resolve essa fricção ao oferecer a informação técnica de
+forma instantânea e conversacional, transformando o suporte de um custo operacional em um
+diferencial competitivo para a organização.
+
+A Figura~\ref{fig:fluxo} apresenta o fluxo de dados entre os componentes do sistema e
+os atores envolvidos no processo de atendimento.
+
+% ── Figura 3: Fluxo de dados e atores ────────────────────────────────────────
+\begin{figure}[ht]
+  \centering
+  \caption[\hspace{0.1cm}Fluxo de dados e atores do sistema de suporte.]{Fluxo de dados entre os atores e componentes do sistema RAG}
+  \vspace{0.4cm}
+  \begin{tikzpicture}[
+      actor/.style  = {rectangle, draw=black, fill=blue!10, rounded corners=3pt,
+                       minimum width=2.2cm, minimum height=0.8cm,
+                       text width=2.1cm, align=center, font=\small},
+      comp/.style   = {rectangle, draw=black, fill=orange!12, rounded corners=3pt,
+                       minimum width=2.4cm, minimum height=0.8cm,
+                       text width=2.3cm, align=center, font=\small},
+      db/.style     = {cylinder, shape border rotate=90, draw=black, fill=gray!20,
+                       minimum width=2.0cm, minimum height=0.8cm,
+                       align=center, font=\small},
+      arrow/.style  = {-{Stealth[length=5pt]}, thick},
+      darrow/.style = {<->, thick, dashed}
+    ]
+    \node[actor] (client) {Cliente B2B};
+    \node[comp,  right=1.2cm of client] (widget) {Widget React\\(Frontend)};
+    \node[comp,  right=1.2cm of widget] (api)    {FastAPI\\(Backend)};
+    \node[comp,  right=1.2cm of api]    (lg)     {LangGraph\\Orquestrador};
+    \node[db,    right=1.2cm of lg]     (pg)     {pgvector\\PostgreSQL};
+
+    \node[comp,  below=1.3cm of lg]     (haiku)  {Claude Haiku\\(Anthropic)};
+    \node[actor, below=1.3cm of api]    (tech)   {Técnico\\(Nível 2+)};
+
+    \draw[arrow]  (client) -- node[above,font=\footnotesize]{consulta} (widget);
+    \draw[darrow] (widget) -- node[above,font=\footnotesize]{REST/HTTP} (api);
+    \draw[arrow]  (api)    -- node[above,font=\footnotesize]{orquestra} (lg);
+    \draw[darrow] (lg)     -- node[above,font=\footnotesize]{busca $k$-NN} (pg);
+    \draw[darrow] (lg)     -- node[right,font=\footnotesize]{prompt + contexto} (haiku);
+    \draw[arrow, dashed] (api) --
+          node[right,font=\footnotesize]{escala (se necessário)} (tech);
+  \end{tikzpicture}
+  \vspace{0.2cm}
+  \\\textbf{\footnotesize Fonte: Elaborado pelos autores}
+  \label{fig:fluxo}
+\end{figure}
+
 
 \section{Especificação do Projeto}
-As especificações do projeto constituem o conjunto de documentos e definições que estabelecem os requisitos, padrões e expectativas técnicas para a entrega da solução. Esta etapa é fundamental para traduzir os objetivos de alto nível em resultados claros e verificáveis, servindo como uma ponte entre o escopo definido anteriormente e o processo final de avaliação de sucesso.
+
+As especificações do projeto constituem o conjunto de documentos e definições que
+estabelecem os requisitos, padrões e expectativas técnicas para a entrega da solução.
+Esta etapa é fundamental para traduzir os objetivos de alto nível em resultados claros e
+verificáveis, servindo como uma ponte entre o escopo definido anteriormente e o processo
+final de avaliação de sucesso.
 
 \subsection{Requisitos de Negócio e Funcionais}
-Os requisitos de negócio focam na criação de valor operacional para a Cancella Informática LTDA. A meta central não é apenas a automação, mas a otimização do capital humano: busca-se liberar o tempo da equipe técnica sênior para operações de alta complexidade em infraestrutura e redes, visando uma redução mínima de 20\% no volume de tickets abertos de Nível 1.
+
+Os requisitos de negócio focam na criação de valor operacional para a Cancella Informática
+LTDA\@. A meta central não é apenas a automação, mas a otimização do capital humano:
+busca-se liberar o tempo da equipe técnica sênior para operações de alta complexidade em
+infraestrutura e redes, visando uma redução mínima de 20\% no volume de \textit{tickets}
+abertos de Nível~1.
 
 Para atender a essas metas, o sistema deverá apresentar as seguintes funcionalidades:
+
 \begin{itemize}
-    \item \textbf{Interação Conversacional:} Chatbot capaz de interpretar dúvidas técnicas e fornecer respostas contextualizadas baseadas na base de conhecimento.
-    \item \textbf{Gerenciamento de Contexto:} O sistema deve manter o histórico de perguntas dentro de uma mesma sessão, permitindo diálogos contínuos e refinamento de dúvidas.
-    \item \textbf{Acesso Direto à Documentação:} Além da resposta textual, a interface deve permitir que o usuário realize o download direto do manual técnico citado pela IA.
-    \item \textbf{Mecanismo de Feedback:} Implementação de um sistema de avaliação binária (curtir/descurtir), permitindo que o cliente valide a precisão da resposta em tempo real.
+    \item \textbf{Interação Conversacional:} \textit{Chatbot} capaz de interpretar dúvidas
+          técnicas em linguagem natural e fornecer respostas contextualizadas baseadas
+          exclusivamente na base de conhecimento da empresa, com suporte a terminologia
+          específica de infraestrutura de redes e servidores.
+    \item \textbf{Gerenciamento de Contexto:} O sistema deve manter o histórico de perguntas
+          dentro de uma mesma sessão via memória de janela deslizante (\textit{sliding window
+          memory}), permitindo diálogos contínuos e refinamento progressivo de dúvidas sem
+          perda de contexto entre turnos consecutivos.
+    \item \textbf{Acesso Direto à Documentação:} Além da resposta textual, a interface deve
+          exibir a referência ao manual técnico utilizado e permitir que o usuário realize o
+          \textit{download} direto do documento citado pela IA, aumentando a transparência
+          da resposta gerada.
+    \item \textbf{Mecanismo de \textit{Feedback}:} Implementação de um sistema de avaliação
+          binária (curtir/descurtir), permitindo que o cliente valide a precisão da resposta
+          em tempo real. Os dados coletados alimentarão um processo periódico de curadoria
+          da base de conhecimento.
 \end{itemize}
 
 \subsection{Requisitos Técnicos e Não Funcionais}
-A infraestrutura técnica será composta por tecnologias que garantam a confiabilidade exigida pelo mercado B2B. O sistema será hospedado em **servidores próprios** da Cancella Informática, garantindo total controle sobre a soberania dos dados e integração com o ambiente de rede atual.
+
+A infraestrutura técnica será composta por tecnologias que garantam a confiabilidade
+exigida pelo mercado B2B\@. O sistema será hospedado em \textbf{servidores próprios} da
+Cancella Informática, garantindo total controle sobre a soberania dos dados e integração
+com o ambiente de rede atual.
 
 Em termos de desempenho e qualidade, os parâmetros estabelecidos são:
+
 \begin{itemize}
-    \item \textbf{Tempo de Resposta:} A latência para a geração de respostas pela IA não deve ultrapassar 5 segundos, garantindo uma experiência de usuário fluida e eficiente.
-    \item \textbf{Disponibilidade e Escalabilidade:} O serviço operará em regime 24/7, com capacidade para suportar o acesso simultâneo de 3 a 4 usuários no cenário atual de atendimento da empresa.
-    \item \textbf{Auditoria e Segurança:} Diferente de sistemas anônimos, os logs de conversa serão registrados de forma identificada. Esta restrição visa permitir auditorias futuras e monitoramento de segurança contra usos indevidos do sistema.
+    \item \textbf{Tempo de Resposta:} A latência para a geração de respostas pela IA não
+          deve ultrapassar 5 segundos, considerando o tempo de vetorização da consulta,
+          busca no índice \textit{pgvector} e geração pelo Claude Haiku via API da Anthropic.
+    \item \textbf{Disponibilidade e Escalabilidade:} O serviço operará em regime 24/7, com
+          capacidade para suportar o acesso simultâneo de 3 a 4 usuários no cenário atual de
+          atendimento da empresa. A conteinerização via Docker permitirá escalonamento
+          horizontal futuro caso a demanda aumente.
+    \item \textbf{Auditoria e Segurança:} Diferente de sistemas anônimos, os \textit{logs}
+          de conversa serão registrados de forma identificada, associando cada interação ao
+          identificador do cliente corporativo autenticado. Esta restrição visa permitir
+          auditorias futuras e monitoramento de segurança contra usos indevidos do sistema.
 \end{itemize}
 
 \subsection{Critérios de Sucesso e Avaliação}
-Os critérios de sucesso estabelecem os parâmetros mensuráveis para determinar se o projeto atingiu seus objetivos estratégicos. Para a validação final da solução junto ao stakeholder Danton Cancella, serão considerados os seguintes indicadores:
+
+Os critérios de sucesso estabelecem os parâmetros mensuráveis para determinar se o projeto
+atingiu seus objetivos estratégicos. Para a validação final da solução junto ao
+\textit{stakeholder} Danton Cancella, serão considerados os seguintes indicadores:
+
 \begin{itemize}
-    \item \textbf{Eficiência Operacional:} Redução real de, no mínimo, 20\% na abertura de novos tickets de suporte básico.
-    \item \textbf{Nível de Satisfação:} Alcançar uma nota média de satisfação superior a 80\% nas avaliações coletadas via widget de chat.
-    \item \textbf{Acurácia Técnica:} Validação de que 100\% das respostas geradas estão fundamentadas exclusivamente nos manuais técnicos fornecidos, eliminando o risco de alucinações do modelo.
+    \item \textbf{Eficiência Operacional:} Redução real de, no mínimo, 20\% na abertura de
+          novos \textit{tickets} de suporte básico, aferida comparando o volume mensal de
+          chamados antes e após a implantação do sistema.
+    \item \textbf{Nível de Satisfação:} Alcançar uma nota média de satisfação superior a
+          80\% nas avaliações binárias coletadas via \textit{widget} de \textit{chat} ao
+          longo do primeiro mês de operação.
+    \item \textbf{Acurácia Técnica:} Validação manual, pelo técnico responsável, de que
+          100\% das respostas geradas em uma amostra de 50 consultas estão fundamentadas
+          exclusivamente nos manuais técnicos fornecidos, eliminando o risco de alucinações
+          do modelo.
 \end{itemize}
 
+
 \section{Arquitetura do Projeto}
-A arquitetura do sistema foi projetada para formalizar a organização dos componentes e seus fluxos de comunicação, assegurando que a solução técnica atenda rigorosamente aos requisitos de desempenho e segurança estabelecidos. 
+
+A arquitetura do sistema foi projetada para formalizar a organização dos componentes e
+seus fluxos de comunicação, assegurando que a solução técnica atenda rigorosamente aos
+requisitos de desempenho e segurança estabelecidos.
 
 \subsection{Padrão Arquitetural e Componentes}
-O desenvolvimento adotará o padrão MVC (Model-View-Controller) tradicional, operando em uma estrutura de backend monolítica. Esta escolha visa simplificar a manutenção e garantir a integridade da lógica de negócios em uma única instância de serviço. Os componentes fundamentais do sistema são:
+
+O desenvolvimento adotará o padrão MVC (\textit{Model-View-Controller}) tradicional,
+operando em uma estrutura de \textit{backend} monolítica. Esta escolha visa simplificar a
+manutenção e garantir a integridade da lógica de negócios em uma única instância de
+serviço. Os componentes fundamentais do sistema são:
+
 \begin{itemize}
-    \item \textbf{Camada de Apresentação (Frontend):} Composta pelo widget de chat e interface administrativa desenvolvidos em React, responsáveis pela interação direta com o usuário.
-    \item \textbf{Camada de Controle e Processamento (Backend):} Implementada em FastAPI, que atua como o núcleo orquestrador das requisições e execução do fluxo RAG.
-    \item \textbf{Camada de Dados:} Baseada no PostgreSQL com a extensão \textit{pgvector}, centralizando o armazenamento de metadados, logs e representações vetoriais da base de conhecimento.
+    \item \textbf{Camada de Apresentação (\textit{Frontend}):} Composta pelo \textit{widget}
+          de \textit{chat} desenvolvido em React, incorporado ao site oficial da Cancella
+          Informática via \textit{iframe}, e por uma interface administrativa para
+          \textit{upload} de novos documentos e visualização dos \textit{logs} de
+          atendimento.
+    \item \textbf{Camada de Controle e Processamento (\textit{Backend}):} Implementada em
+          FastAPI, que atua como núcleo orquestrador das requisições. Ao receber uma
+          consulta, o \textit{backend} aciona o grafo LangGraph, que gerencia os nós de
+          vetorização da \textit{query}, busca por similaridade, montagem do \textit{prompt}
+          com contexto recuperado e chamada ao Claude Haiku via API da Anthropic.
+    \item \textbf{Camada de Dados:} Baseada no PostgreSQL com a extensão \textit{pgvector},
+          centralizando o armazenamento de metadados dos documentos, \textit{logs} de
+          conversação identificados por usuário e os vetores de \textit{embedding}
+          utilizados na busca semântica.
 \end{itemize}
 
 \subsection{Fluxo de Comunicação e Ingestão}
-A comunicação entre o frontend e o backend será realizada através do protocolo REST (HTTP), garantindo uma arquitetura cliente-servidor padronizada e eficiente. O processo de alimentação do sistema ocorrerá via \textit{upload} direto de arquivos através de rotas dedicadas na API, permitindo que a gestão da base de conhecimento seja feita de forma contínua e controlada. Para assegurar a rastreabilidade exigida, a arquitetura prevê a vinculação de cada interação a identificadores de usuários específicos, integrando os requisitos de auditoria diretamente ao fluxo de dados.
 
-
+A comunicação entre o \textit{frontend} e o \textit{backend} será realizada através do
+protocolo REST (HTTP), garantindo uma arquitetura cliente-servidor padronizada e eficiente.
+O processo de alimentação do sistema ocorrerá via \textit{upload} direto de arquivos PDF
+através de rotas dedicadas na API: ao receber um novo documento, o \textit{backend}
+executa automaticamente o pipeline de ingestão — extração de texto, segmentação em
+\textit{chunks}, vetorização e indexação no \textit{pgvector} — sem necessidade de
+intervenção manual. Para assegurar a rastreabilidade exigida, cada interação é vinculada
+ao identificador do usuário autenticado, integrando os requisitos de auditoria diretamente
+ao fluxo de dados.
 
 \subsection{Ambiente de Execução e Implantação}
-Visando garantir a compatibilidade de bibliotecas e a consistência entre ambientes, o projeto utilizará Docker para a conteinerização de todos os serviços. Toda a solução será executada em uma instância única nos servidores locais da Cancella Informática, unificando o processamento da API, do banco de dados e do widget em um ambiente controlado. Esta estratégia de \textit{deploy} local assegura a soberania dos dados técnicos da empresa e atende às restrições de infraestrutura identificadas.
+
+Visando garantir a compatibilidade de bibliotecas e a consistência entre ambientes, o
+projeto utilizará Docker para a conteinerização de todos os serviços, organizados em três
+contêineres independentes: o serviço FastAPI, o banco de dados PostgreSQL com
+\textit{pgvector} e o servidor de arquivos estáticos do \textit{frontend} React. Toda a
+solução será orquestrada via \textit{Docker Compose} e executada nos servidores locais da
+Cancella Informática. Esta estratégia de \textit{deploy} local assegura a soberania dos
+dados técnicos da empresa, elimina custos recorrentes de hospedagem em nuvem e atende às
+restrições de infraestrutura identificadas no diagnóstico.
+
+
+\section{Monitoramento e Inteligência de Negócio (BI)}
+
+A coleta dos \textit{logs} identificados de conversação, por si só, não converte os dados
+em informação acionável. Para acompanhar de forma contínua os critérios de sucesso definidos
+na Seção~5.3 — eficiência operacional, nível de satisfação e acurácia — e os indicadores
+operacionais de Deflection Rate e TMPR, foi incorporada à solução uma camada de
+\textit{Business Intelligence} (BI). Essa camada transforma os registros brutos da tabela
+de \textit{logs} em indicadores visuais e atualizados, fechando o ciclo entre coleta de
+\textit{feedback}, observabilidade e curadoria da base de conhecimento, sem exigir inspeção
+manual do banco de dados pelo técnico responsável.
+
+\subsection{Escolha da Ferramenta e Integração}
+
+Para a construção do painel optou-se pelo \textbf{Metabase}, ferramenta de BI de código
+aberto executada \textit{on-premise}. A escolha apoia-se em três critérios alinhados aos
+requisitos não funcionais do projeto: custo nulo de licenciamento, integração nativa com o
+PostgreSQL e operação totalmente local, sem envio de dados a serviços de nuvem — preservando
+a soberania dos dados técnicos da Cancella Informática. O Metabase foi adicionado como um
+quarto contêiner ao \textit{Docker Compose}, na mesma rede interna dos demais serviços,
+conectando-se diretamente ao banco pelo \textit{hostname} do serviço de dados, de modo que
+nenhuma credencial ou porta do banco precise ser exposta externamente.
+
+Os indicadores são definidos como consultas SQL nativas sobre a tabela
+\texttt{conversation\_logs}, que registra, para cada interação, a pergunta, a resposta, o
+usuário autenticado, o documento-fonte citado, o resultado da busca (encontrado ou não) e a
+avaliação binária do cliente. Para viabilizar a medição do TMPR, a tabela foi instrumentada
+com a coluna \texttt{response\_time\_ms} por meio de uma migração de \textit{schema},
+passando a registrar a latência de geração de cada resposta.
+
+\subsection{Indicadores do Painel}
+
+O painel \textit{``Painel de Suporte RAG''} consolida os principais indicadores do serviço.
+No topo, quatro métricas-síntese (\textit{KPIs}) oferecem leitura imediata do estado da
+operação, conforme a Figura~\ref{fig:bi_kpis}: o volume total de conversas, a Deflection
+Rate, o nível de satisfação e o TMPR.
+
+% ── Figura 4: KPIs do painel ─────────────────────────────────────────────────
+\begin{figure}[ht]
+  \centering
+  \caption[\hspace{0.1cm}Indicadores-síntese (KPIs) do painel de suporte.]{Indicadores-síntese do painel: volume, Deflection Rate, satisfação e TMPR}
+  \vspace{0.4cm}
+  \includegraphics[width=\textwidth]{figuras/bi_kpis.png}
+  \vspace{0.2cm}
+  \\\textbf{\footnotesize Fonte: Elaborado pelos autores (Metabase)}
+  \label{fig:bi_kpis}
+\end{figure}
+
+Além dos \textit{KPIs}, o painel apresenta visualizações analíticas que apoiam o diagnóstico
+operacional: a série temporal de volume de conversas por dia, a distribuição das avaliações
+de \textit{feedback} (útil, não útil e sem avaliação), a distribuição do tempo de resposta
+por faixa em relação ao SLA de 5~segundos, os documentos mais citados nas respostas e o
+volume de conversas por cliente. A Figura~\ref{fig:bi_painel} apresenta a visão completa do
+painel.
+
+% ── Figura 5: Painel completo ────────────────────────────────────────────────
+\begin{figure}[ht]
+  \centering
+  \caption[\hspace{0.1cm}Visão geral do painel de BI no Metabase.]{Visão geral do painel de monitoramento construído no Metabase}
+  \vspace{0.4cm}
+  \includegraphics[width=\textwidth]{figuras/bi_painel.png}
+  \vspace{0.2cm}
+  \\\textbf{\footnotesize Fonte: Elaborado pelos autores (Metabase)}
+  \label{fig:bi_painel}
+\end{figure}
+
+\subsection{Validação com Conjunto Representativo}
+
+Como o sistema ainda não entrou em operação efetiva, a corretude do painel e das métricas
+foi validada com um conjunto de dados representativo de 653 interações distribuídas em 260
+sessões, parametrizado para refletir o cenário B2B descrito no diagnóstico (entre 4 e 5
+chamados diários). Essa validação confirma que os indicadores são calculados corretamente a
+partir dos \textit{logs} e que o painel atualiza automaticamente à medida que novos registros
+são inseridos. A Tabela~\ref{tab:bi_resultados} sintetiza os valores obtidos.
+
+% ── Tabela 1: Resultados da validação ────────────────────────────────────────
+\begin{table}[ht]
+  \centering
+  \caption[\hspace{0.1cm}Indicadores obtidos na validação do painel.]{Indicadores obtidos na validação do painel com o conjunto representativo}
+  \vspace{0.2cm}
+  \begin{tabular}{lcc}
+    \hline
+    \textbf{Indicador} & \textbf{Meta de referência} & \textbf{Resultado (amostra)} \\
+    \hline
+    Deflection Rate            & ---            & 85,5\%        \\
+    Nível de Satisfação        & $>$ 80\%       & 79,9\%        \\
+    TMPR                       & $\leq$ 5 s     & 3,34 s        \\
+    Respostas dentro do SLA    & ---            & 89,0\%        \\
+    Consultas sem resposta     & ---            & 95 (14,5\%)   \\
+    \hline
+  \end{tabular}
+  \vspace{0.2cm}
+  \\\textbf{\footnotesize Fonte: Elaborado pelos autores}
+  \label{tab:bi_resultados}
+\end{table}
+
+É relevante observar que, no conjunto avaliado, o nível de satisfação (79,9\%) situou-se
+ligeiramente abaixo da meta de 80\%. Mais do que um número isolado, esse resultado evidencia
+o próprio valor da camada de BI: o painel destaca exatamente o indicador que demanda atenção,
+direcionando o processo de curadoria da base de conhecimento para as respostas pior avaliadas
+e fornecendo um instrumento objetivo de melhoria contínua para a operação.
+
+
+\section{Validade e Confiabilidade do Modelo}
+
+Um aspecto crítico em sistemas RAG de produção é a definição explícita do horizonte de
+confiabilidade da solução — isto é, por quanto tempo e sob quais condições as respostas
+geradas podem ser consideradas tecnicamente corretas.
+
+No sistema proposto, a confiabilidade das respostas está diretamente atrelada à atualidade
+da base de conhecimento vetorial, e não ao modelo de linguagem em si. O Claude Haiku atua
+como motor de síntese e geração de linguagem natural, enquanto toda a informação técnica é
+fornecida pelos documentos indexados. Portanto, o modelo é confiável enquanto a base de
+conhecimento estiver sincronizada com as versões atuais dos equipamentos e procedimentos
+da Cancella Informática.
+
+Identificam-se três cenários principais que comprometem a validade das respostas:
+
+\begin{itemize}
+    \item \textbf{Atualização de \textit{firmware} ou \textit{hardware}:} Quando um
+          fabricante lança uma nova versão de \textit{firmware} ou substitui um modelo de
+          equipamento, os manuais anteriores indexados podem conter procedimentos
+          desatualizados — como sequências de inicialização ou comandos de diagnóstico que
+          mudaram entre versões. Recomenda-se um ciclo de revisão trimestral da base de
+          documentos.
+    \item \textbf{Alterações nos sistemas internos da Cancella:} Mudanças em topologias de
+          rede, políticas de segurança ou contratos de serviço com clientes que não sejam
+          refletidas em novos documentos indexados tornarão as respostas do assistente
+          inconsistentes com a realidade operacional da empresa.
+    \item \textbf{Descontinuação de modelos:} O Claude Haiku e o modelo de
+          \textit{embedding} \textit{voyage-3} da Voyage AI estão sujeitos a políticas de
+          ciclo de vida de seus respectivos provedores. A descontinuação de qualquer um
+          desses modelos exigirá migração para versões substitutas, com re-indexação
+          completa da base vetorial caso o modelo de \textit{embedding} seja alterado, pois
+          vetores gerados por modelos distintos não são diretamente comparáveis.
+\end{itemize}
+
+Dado o porte atual da empresa — com uma base de documentos estimada em dezenas de manuais
+técnicos — o custo de re-indexação completa é baixo, tornando ciclos periódicos de
+atualização plenamente viáveis dentro da operação da Cancella Informática.
+
+
+\section{Trabalhos Futuros e Extensões}
+
+O sistema proposto representa uma solução inicial focada no Nível~1 de suporte. Contudo,
+a arquitetura adotada abre um conjunto de extensões naturais que podem ampliar
+significativamente o valor entregue à Cancella Informática e servir como objeto de pesquisa
+acadêmica continuada.
+
+\subsection{Expansão para Suporte de Nível 2}
+
+A versão atual restringe-se a dúvidas documentadas em manuais técnicos. Uma extensão
+relevante seria a incorporação de históricos de chamados resolvidos (\textit{tickets}
+passados) como fonte de conhecimento adicional. Com isso, o assistente passaria a aprender
+com a experiência acumulada da equipe técnica, respondendo também a situações atípicas que
+não constam nos manuais, mas que já foram solucionadas anteriormente.
+
+\subsection{Avaliação Automática com LLM-as-a-Judge}
+
+Atualmente, a acurácia das respostas é validada manualmente pelo técnico responsável. Uma
+extensão promissora é a implementação de avaliação automática utilizando um LLM secundário
+como árbitro (\textit{LLM-as-a-Judge}), que pontua cada resposta gerada segundo critérios
+de fidelidade ao documento-fonte, completude e correção técnica. Essa abordagem permitiria
+monitoramento contínuo da qualidade sem intervenção humana.
+
+\subsection{Suporte Multimodal}
+
+Manuais técnicos de infraestrutura frequentemente contêm diagramas de cabeamento, esquemas
+de rack e capturas de tela de interfaces de gerenciamento. A incorporação de capacidades
+multimodais permitiria que o assistente interpretasse e referenciasse essas imagens nas
+respostas, aumentando a precisão em diagnósticos visuais.
+
+\subsection{Integração com Sistema de Monitoramento}
+
+Uma extensão de alto impacto seria a integração do assistente com ferramentas de
+monitoramento de infraestrutura como Zabbix ou Grafana, permitindo que o sistema não apenas
+responda a dúvidas reativas, mas também emita alertas proativos e sugira procedimentos de
+remediação com base em métricas coletadas em tempo real dos servidores dos clientes.
+
+\subsection{Replicabilidade para Outros Contextos}
+
+Do ponto de vista acadêmico, a arquitetura desenvolvida é replicável para qualquer empresa
+de suporte técnico B2B que possua documentação interna estruturada. A publicação do
+pipeline como um \textit{template} de código aberto — parametrizado por domínio de
+conhecimento — constituiria uma contribuição relevante para a comunidade de engenharia de
+dados aplicada a pequenas e médias empresas.
 
 \end{document}
